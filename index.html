@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buket Bunga & Kartu Ucapan Spesial</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 35%, #31101e 70%, #000000 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            touch-action: manipulation;
+        }
+
+        .font-handwriting {
+            font-family: 'Dancing Script', cursive;
+        }
+
+        .font-serif-title {
+            font-family: 'Playfair Display', serif;
+        }
+
+        /* Canvas Particle Layer */
+        #particle-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        /* Bouquet Floating Animation */
+        @keyframes floatSlow {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-12px) rotate(1deg); }
+        }
+
+        .animate-float {
+            animation: floatSlow 4s ease-in-out infinite;
+        }
+
+        /* Glow effect for interactive elements */
+        .bouquet-glow {
+            filter: drop-shadow(0 15px 25px rgba(234, 179, 8, 0.25));
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .bouquet-glow:hover, .bouquet-glow:active {
+            filter: drop-shadow(0 20px 35px rgba(234, 179, 8, 0.45)) brightness(1.05);
+            transform: scale(1.03);
+        }
+
+        /* Card Animation Styles */
+        .card-container {
+            perspective: 1200px;
+            transition: all 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .card-closed {
+            opacity: 0;
+            transform: translateY(120px) scale(0.6) rotateX(-20deg);
+            pointer-events: none;
+        }
+
+        .card-open {
+            opacity: 1;
+            transform: translateY(0) scale(1) rotateX(0deg);
+            pointer-events: auto;
+        }
+
+        /* Envelope / Ribbon Pulse */
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 0.7; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.08); }
+        }
+
+        .hint-badge {
+            animation: pulseGlow 2s infinite;
+        }
+
+        /* Custom Scrollbar for Card Text */
+        .custom-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 10px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: rgba(234, 179, 8, 0.5);
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-between min-h-screen p-4 sm:p-6 overflow-y-auto text-slate-100">
+
+    <!-- Canvas background for Floating Black Petals and Gold Sparkles -->
+    <canvas id="particle-canvas"></canvas>
+
+    <!-- Header Section -->
+    <header class="text-center mt-4 sm:mt-6 z-10 select-none">
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-md shadow-md border border-amber-500/30 mb-2">
+            <i class="fa-solid fa-crown text-amber-400 text-sm animate-bounce">
+                <span class="sr-only">Crown Icon</span>
+            </i>
+            <span class="text-xs sm:text-sm font-semibold tracking-wide text-amber-300 uppercase">Ada Pesan Rahasia</span>
+        </div>
+        <h1 class="text-3xl sm:text-5xl font-serif-title font-bold text-amber-100 drop-shadow-md">
+            Black Velvet Bouquet
+        </h1>
+    </header>
+
+    <!-- Main Interactive Area -->
+    <main class="relative w-full max-w-lg flex flex-col items-center justify-center my-auto py-6 z-20">
+
+        <!-- Hint Badge to click -->
+        <div id="tap-hint" class="hint-badge mb-4 bg-gradient-to-r from-amber-600 via-amber-500 to-amber-700 text-slate-950 font-bold text-xs sm:text-sm px-5 py-2 rounded-full shadow-lg shadow-amber-500/20 flex items-center gap-2 cursor-pointer transition-transform hover:scale-105 active:scale-95 border border-amber-300">
+            <i class="fa-solid fa-hand-pointer text-slate-900"></i>
+            <span>Sentuh Mawar Hitam Ini!</span>
+        </div>
+
+        <!-- SVG Bouquet Container (Clickable) -->
+        <div id="bouquet-wrapper" class="bouquet-glow animate-float cursor-pointer relative z-10 w-72 sm:w-96 select-none" title="Sentuh untuk membuka kartu ucapan">
+            <svg viewBox="0 0 500 600" class="w-full h-auto drop-shadow-2xl" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <!-- Dark & Gold Wrapper Gradients -->
+                    <linearGradient id="wrapGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#334155" />
+                        <stop offset="50%" stop-color="#0f172a" />
+                        <stop offset="100%" stop-color="#020617" />
+                    </linearGradient>
+
+                    <linearGradient id="innerWrap" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#1e293b" />
+                        <stop offset="100%" stop-color="#0f172a" />
+                    </linearGradient>
+
+                    <linearGradient id="goldRibbonGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#fef08a" />
+                        <stop offset="50%" stop-color="#eab308" />
+                        <stop offset="100%" stop-color="#854d0e" />
+                    </linearGradient>
+
+                    <linearGradient id="stemGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#334155" />
+                        <stop offset="100%" stop-color="#0f172a" />
+                    </linearGradient>
+
+                    <!-- Black & Crimson Rose Gradients -->
+                    <linearGradient id="roseBlackMain" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#334155" />
+                        <stop offset="40%" stop-color="#1e293b" />
+                        <stop offset="85%" stop-color="#090d16" />
+                        <stop offset="100%" stop-color="#000000" />
+                    </linearGradient>
+
+                    <linearGradient id="roseGothicCrimson" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#881337" />
+                        <stop offset="60%" stop-color="#4c0519" />
+                        <stop offset="100%" stop-color="#0f0206" />
+                    </linearGradient>
+
+                    <linearGradient id="roseDarkCharcoal" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#475569" />
+                        <stop offset="60%" stop-color="#0f172a" />
+                        <stop offset="100%" stop-color="#020617" />
+                    </linearGradient>
+
+                    <linearGradient id="gothicLeafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#334155" />
+                        <stop offset="100%" stop-color="#064e3b" />
+                    </linearGradient>
+                </defs>
+
+                <!-- Leaves Background -->
+                <g id="leaves">
+                    <path d="M 150 240 C 90 180 60 220 110 280 C 130 260 145 250 150 240 Z" fill="url(#gothicLeafGrad)" opacity="0.9"/>
+                    <path d="M 350 240 C 410 180 440 220 390 280 C 370 260 355 250 350 240 Z" fill="url(#gothicLeafGrad)" opacity="0.9"/>
+                    <path d="M 220 140 C 200 70 260 60 270 120 C 250 130 235 135 220 140 Z" fill="url(#gothicLeafGrad)" opacity="0.8"/>
+                    <path d="M 280 140 C 300 70 240 60 230 120 C 250 130 265 135 280 140 Z" fill="url(#gothicLeafGrad)" opacity="0.8"/>
+                </g>
+
+                <!-- Flower Stems Bottom -->
+                <g id="stems">
+                    <path d="M 230 440 L 210 560" stroke="url(#stemGrad)" stroke-width="8" stroke-linecap="round"/>
+                    <path d="M 250 440 L 250 570" stroke="url(#stemGrad)" stroke-width="9" stroke-linecap="round"/>
+                    <path d="M 270 440 L 290 560" stroke="url(#stemGrad)" stroke-width="8" stroke-linecap="round"/>
+                </g>
+
+                <!-- Outer Wrapping Back -->
+                <path d="M 100 240 L 250 460 L 400 240 C 400 240 300 290 250 290 C 200 290 100 240 100 240 Z" fill="url(#innerWrap)" opacity="0.95"/>
+                <path d="M 70 220 L 250 480 L 430 220 C 430 220 310 270 250 270 C 190 270 70 220 70 220 Z" fill="url(#wrapGrad)"/>
+
+                <!-- FLOWERS GROUP (BLACK ROSES) -->
+                <g id="flowers">
+                    <!-- Rose 1 (Top Center - Dark Crimson/Black Accent) -->
+                    <g transform="translate(250, 160)">
+                        <circle cx="0" cy="0" r="45" fill="url(#roseGothicCrimson)"/>
+                        <path d="M -25 -10 C -10 -35 10 -35 25 -10 C 35 15 -35 15 -25 -10 Z" fill="#9f1239" opacity="0.5"/>
+                        <path d="M -15 -5 C -5 -20 5 -20 15 -5 C 20 10 -20 10 -15 -5 Z" fill="#4c0519"/>
+                        <!-- Gold Petal Edge Lines -->
+                        <path d="M -35 0 Q 0 -40 35 0" stroke="#eab308" stroke-width="0.8" fill="none" opacity="0.7"/>
+                    </g>
+
+                    <!-- Rose 2 (Left - Charcoal Black Rose) -->
+                    <g transform="translate(170, 210)">
+                        <circle cx="0" cy="0" r="48" fill="url(#roseDarkCharcoal)"/>
+                        <path d="M -25 -10 C -10 -35 10 -35 25 -10 C 35 15 -35 15 -25 -10 Z" fill="#64748b" opacity="0.4"/>
+                        <path d="M -15 -5 C -5 -20 5 -20 15 -5 C 20 10 -20 10 -15 -5 Z" fill="#0f172a"/>
+                        <!-- Gold Petal Edge Lines -->
+                        <path d="M -30 -10 Q 0 -42 30 -10" stroke="#eab308" stroke-width="0.8" fill="none" opacity="0.6"/>
+                    </g>
+
+                    <!-- Rose 3 (Right - Pure Velvet Black Rose) -->
+                    <g transform="translate(330, 210)">
+                        <circle cx="0" cy="0" r="48" fill="url(#roseBlackMain)"/>
+                        <path d="M -25 -10 C -10 -35 10 -35 25 -10 C 35 15 -35 15 -25 -10 Z" fill="#475569" opacity="0.4"/>
+                        <path d="M -15 -5 C -5 -20 5 -20 15 -5 C 20 10 -20 10 -15 -5 Z" fill="#020617"/>
+                        <!-- Gold Petal Edge Lines -->
+                        <path d="M -30 -10 Q 0 -42 30 -10" stroke="#eab308" stroke-width="0.8" fill="none" opacity="0.6"/>
+                    </g>
+
+                    <!-- Rose 4 (Center Main - Big Black Velvet Rose) -->
+                    <g transform="translate(250, 240)">
+                        <circle cx="0" cy="0" r="56" fill="url(#roseBlackMain)"/>
+                        <circle cx="-10" cy="-10" r="36" fill="#1e293b" opacity="0.7"/>
+                        <path d="M -30 -12 C -12 -42 12 -42 30 -12 C 42 18 -42 18 -30 -12 Z" fill="#475569" opacity="0.5"/>
+                        <path d="M -18 -6 C -6 -24 6 -24 18 -6 C 24 12 -24 12 -18 -6 Z" fill="#000000"/>
+                        <!-- Gold Tracing for Gothic Elegance -->
+                        <path d="M -40 -10 Q 0 -50 40 -10" stroke="#eab308" stroke-width="1.2" fill="none" opacity="0.8"/>
+                        <path d="M -25 15 Q 0 40 25 15" stroke="#ca8a04" stroke-width="1" fill="none" opacity="0.7"/>
+                    </g>
+
+                    <!-- Golden Sparkle Fillers & Silver Accents -->
+                    <g fill="#fef08a" opacity="0.9">
+                        <!-- Top left cluster -->
+                        <circle cx="140" cy="140" r="6"/><circle cx="152" cy="132" r="4"/><circle cx="132" cy="150" r="4"/>
+                        <!-- Top right cluster -->
+                        <circle cx="360" cy="140" r="6"/><circle cx="348" cy="132" r="4"/><circle cx="368" cy="150" r="4"/>
+                        <!-- Mid details -->
+                        <circle cx="200" cy="160" r="5"/><circle cx="300" cy="160" r="5"/>
+                        <circle cx="250" cy="305" r="6"/><circle cx="235" cy="312" r="4"/><circle cx="265" cy="312" r="4"/>
+                    </g>
+
+                    <g fill="#ffffff">
+                        <circle cx="140" cy="140" r="2"/>
+                        <circle cx="360" cy="140" r="2"/>
+                        <circle cx="200" cy="160" r="2"/>
+                        <circle cx="300" cy="160" r="2"/>
+                        <circle cx="250" cy="305" r="2"/>
+                    </g>
+                </g>
+
+                <!-- Front Wrapping Layers -->
+                <g id="front-wrapper">
+                    <!-- Left Fold -->
+                    <path d="M 80 230 L 250 470 L 220 280 Z" fill="url(#wrapGrad)"/>
+                    <!-- Right Fold -->
+                    <path d="M 420 230 L 250 470 L 280 280 Z" fill="url(#wrapGrad)" opacity="0.95"/>
+                    <!-- Main Front Wrap Envelope -->
+                    <path d="M 110 260 L 250 470 L 390 260 C 320 320 180 320 110 260 Z" fill="url(#wrapGrad)"/>
+                    <!-- Gold Trim Highlight Border -->
+                    <path d="M 110 260 C 180 320 320 320 390 260" stroke="#eab308" stroke-width="3.5" fill="none" opacity="0.85"/>
+                </g>
+
+                <!-- Gold Ribbon Bow -->
+                <g id="ribbon" transform="translate(250, 440)">
+                    <!-- Bow Loops -->
+                    <path d="M 0 -10 C -40 -40 -70 -10 -30 10 C -10 20 0 -10 0 -10 Z" fill="url(#goldRibbonGrad)"/>
+                    <path d="M 0 -10 C 40 -40 70 -10 30 10 C 10 20 0 -10 0 -10 Z" fill="url(#goldRibbonGrad)"/>
+                    <!-- Ribbon Tails -->
+                    <path d="M -5 5 L -35 55 L -15 50 L 0 5 Z" fill="url(#goldRibbonGrad)"/>
+                    <path d="M 5 5 L 35 55 L 15 50 L 0 5 Z" fill="url(#goldRibbonGrad)"/>
+                    <!-- Center Knot -->
+                    <circle cx="0" cy="-2" r="12" fill="#713f12"/>
+                    <circle cx="0" cy="-2" r="9" fill="url(#goldRibbonGrad)"/>
+                </g>
+            </svg>
+        </div>
+
+    </main>
+
+    <!-- Modal Card Ucapan Overlay -->
+    <div id="card-overlay" class="fixed inset-0 z-40 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4 transition-all duration-500 opacity-0 pointer-events-none">
+        
+        <!-- The Greeting Card (Dark Elegant & Gold Theme) -->
+        <div id="greeting-card" class="card-container card-closed relative w-full max-w-md bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 text-slate-100 rounded-3xl p-6 sm:p-8 shadow-2xl border-2 border-amber-500/40">
+            
+            <!-- Decorative Emblem Top Left -->
+            <div class="absolute -top-5 -left-5 bg-gradient-to-tr from-amber-600 to-yellow-400 text-slate-950 w-12 h-12 rounded-full flex items-center justify-center shadow-lg border-2 border-slate-900 font-bold">
+                <i class="fa-solid fa-moon text-xl"></i>
+            </div>
+
+            <!-- Close Button -->
+            <button id="close-btn" class="absolute top-4 right-4 w-9 h-9 bg-slate-800/80 hover:bg-amber-500 hover:text-slate-950 text-slate-300 rounded-full flex items-center justify-center shadow-md transition-all duration-200 group focus:outline-none border border-slate-700">
+                <i class="fa-solid fa-xmark text-lg group-hover:rotate-90 transition-transform"></i>
+                <span class="sr-only">Tutup</span>
+            </button>
+
+            <!-- Card Content Header -->
+            <div class="text-center mt-2 mb-4">
+                <span class="text-xs uppercase tracking-widest text-amber-400 font-bold">Pesan untuk mu</span>
+                <h2 class="text-3xl sm:text-4xl font-handwriting text-amber-300 mt-1 font-bold">
+                    Apriyani
+                </h2>
+                <div class="w-20 h-0.5 bg-gradient-to-r from-transparent via-amber-400 to-transparent mx-auto mt-2"></div>
+            </div>
+
+            <!-- Card Body Text -->
+            <div class="custom-scroll max-h-60 overflow-y-auto px-2 py-1 text-center text-slate-300 space-y-3 leading-relaxed text-sm sm:text-base">
+                <p class="italic font-serif-title text-amber-200/90">
+                    "Terimakasih ya kamu udah ada di dalam hidup"
+                </p>
+                <p>
+                    Makasih ya udah datang di dalam hidupku maap ya aku sering maksain untuk chatan sama kamu, aku udah liat dari sikap kamu ke aku kaya risih banget kamu engga mau chatan lagi okeyy gapapa selagi itu bikin kamu bahagia aku akan nerima. Terima kasih telah menjadi Support system aku sama makasih telah menjadi sosok teristimewa yang selalu ada di hidupku aku berterimakasih banyak banyak telah menerima hadiah dari aku sama mamah aku makasihh ya.
+                </p>
+                <p class="font-semibold text-amber-400">
+                    Semoga sekarang harimu bahagia tanpa aku. aku ngga bakal spam chat kamu lagi, kalo perlu sekalian aku ngga bakal chat kamu lagi.
+                </p>
+            </div>
+
+            <!-- Card Footer & Interactive Action -->
+            <div class="mt-6 text-center pt-4 border-t border-slate-800 flex flex-col items-center gap-3">
+                <p class="text-xs text-slate-400 font-medium">
+                    from: Romeo, Alpha, Foxtrot, Alpha.
+                </p>
+                <button id="close-card-btn" class="px-6 py-2.5 bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-bold rounded-full shadow-lg shadow-amber-500/20 hover:shadow-amber-500/40 active:scale-95 transition-all text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-gem"></i>
+                    Simpan Pesan Ini
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <footer class="text-center text-xs text-slate-400/80 mb-2 z-10 font-medium">
+        Klik mawar hitam untuk membuka & membaca kartu ucapan kapan saja
+    </footer>
+
+    <!-- JavaScript Logic -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const bouquetWrapper = document.getElementById('bouquet-wrapper');
+            const tapHint = document.getElementById('tap-hint');
+            const cardOverlay = document.getElementById('card-overlay');
+            const greetingCard = document.getElementById('greeting-card');
+            const closeBtn = document.getElementById('close-btn');
+            const closeCardBtn = document.getElementById('close-card-btn');
+            const canvas = document.getElementById('particle-canvas');
+            const ctx = canvas.getContext('2d');
+
+            let particles = [];
+            let animationFrameId = null;
+            let isCardOpen = false;
+
+            // Resize Canvas dynamically
+            function resizeCanvas() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+
+            // Particle Class (Black Petals & Gold Sparkles)
+            class Particle {
+                constructor(isBurst = false) {
+                    this.isBurst = isBurst;
+                    this.reset();
+                }
+
+                reset() {
+                    this.x = Math.random() * canvas.width;
+                    this.y = this.isBurst ? canvas.height / 2 + (Math.random() * 100 - 50) : -20;
+                    this.size = Math.random() * 10 + 6;
+                    this.speedY = Math.random() * 1.5 + 0.8;
+                    this.speedX = Math.random() * 1.5 - 0.75;
+                    this.rotation = Math.random() * 360;
+                    this.rotationSpeed = (Math.random() - 0.5) * 2;
+                    this.opacity = Math.random() * 0.7 + 0.3;
+                    this.colorType = Math.floor(Math.random() * 4); // 0: Deep Black, 1: Dark Charcoal, 2: Gold Sparkle, 3: Crimson Accent
+                    
+                    if (this.isBurst) {
+                        this.speedY = (Math.random() - 0.7) * 5;
+                        this.speedX = (Math.random() - 0.5) * 6;
+                    }
+                }
+
+                update() {
+                    this.y += this.speedY;
+                    this.x += Math.sin(this.y * 0.02) + this.speedX;
+                    this.rotation += this.rotationSpeed;
+
+                    // Reset when off screen
+                    if (this.y > canvas.height + 20 || this.x < -20 || this.x > canvas.width + 20) {
+                        if (isCardOpen || Math.random() > 0.5) {
+                            this.isBurst = false;
+                            this.reset();
+                        }
+                    }
+                }
+
+                draw() {
+                    ctx.save();
+                    ctx.translate(this.x, this.y);
+                    ctx.rotate((this.rotation * Math.PI) / 180);
+                    ctx.globalAlpha = this.opacity;
+
+                    if (this.colorType === 2) {
+                        // Gold Star / Sparkle
+                        ctx.fillStyle = '#f59e0b';
+                        ctx.beginPath();
+                        for (let i = 0; i < 5; i++) {
+                            ctx.lineTo(Math.cos((18 + i * 72) * Math.PI / 180) * (this.size / 2),
+                                       -Math.sin((18 + i * 72) * Math.PI / 180) * (this.size / 2));
+                            ctx.lineTo(Math.cos((54 + i * 72) * Math.PI / 180) * (this.size / 4),
+                                       -Math.sin((54 + i * 72) * Math.PI / 180) * (this.size / 4));
+                        }
+                        ctx.closePath();
+                        ctx.fill();
+                    } else {
+                        // Petal shape (Black, Charcoal, Crimson)
+                        if (this.colorType === 0) ctx.fillStyle = '#1e293b'; // Charcoal Black
+                        else if (this.colorType === 1) ctx.fillStyle = '#090d16'; // Deep Pitch Black
+                        else ctx.fillStyle = '#881337'; // Gothic Dark Crimson
+
+                        ctx.beginPath();
+                        ctx.moveTo(0, 0);
+                        ctx.bezierCurveTo(-this.size, -this.size / 2, -this.size, this.size, 0, this.size * 1.5);
+                        ctx.bezierCurveTo(this.size, this.size, this.size, -this.size / 2, 0, 0);
+                        ctx.fill();
+
+                        // Add delicate gold edge line on black petals
+                        if (this.colorType !== 2) {
+                            ctx.strokeStyle = '#eab308';
+                            ctx.lineWidth = 0.5;
+                            ctx.stroke();
+                        }
+                    }
+
+                    ctx.restore();
+                }
+            }
+
+            // Create initial background falling petals
+            function initParticles() {
+                particles = [];
+                const count = window.innerWidth < 640 ? 25 : 45;
+                for (let i = 0; i < count; i++) {
+                    const p = new Particle();
+                    p.y = Math.random() * canvas.height;
+                    particles.push(p);
+                }
+            }
+
+            // Burst petals on card opening
+            function createBurst() {
+                const burstCount = 40;
+                for (let i = 0; i < burstCount; i++) {
+                    particles.push(new Particle(true));
+                }
+            }
+
+            // Animation Loop
+            function animateParticles() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                particles.forEach((p) => {
+                    p.update();
+                    p.draw();
+                });
+                animationFrameId = requestAnimationFrame(animateParticles);
+            }
+
+            initParticles();
+            animateParticles();
+
+            // Open Card Function
+            function openCard() {
+                isCardOpen = true;
+                cardOverlay.classList.remove('opacity-0', 'pointer-events-none');
+                cardOverlay.classList.add('opacity-100', 'pointer-events-auto');
+
+                greetingCard.classList.remove('card-closed');
+                greetingCard.classList.add('card-open');
+
+                // Burst particles effect
+                createBurst();
+            }
+
+            // Close Card Function
+            function closeCard() {
+                isCardOpen = false;
+                greetingCard.classList.remove('card-open');
+                greetingCard.classList.add('card-closed');
+
+                setTimeout(() => {
+                    cardOverlay.classList.remove('opacity-100', 'pointer-events-auto');
+                    cardOverlay.classList.add('opacity-0', 'pointer-events-none');
+                }, 300);
+            }
+
+            // Event Listeners
+            bouquetWrapper.addEventListener('click', openCard);
+            tapHint.addEventListener('click', openCard);
+            closeBtn.addEventListener('click', closeCard);
+            closeCardBtn.addEventListener('click', closeCard);
+
+            // Close card when clicking outside the card container
+            cardOverlay.addEventListener('click', (e) => {
+                if (e.target === cardOverlay) {
+                    closeCard();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
